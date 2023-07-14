@@ -3,13 +3,13 @@ function Pagebar(props) {
 	const page = parseInt(props.page);
 
 	function disablePrev() {
-		if (page === 1) {
+		if (page <= 1) {
 			return " disabled";
 		}
 	}
 
 	function disableNext() {
-		if (page === lastPage) {
+		if (page >= lastPage) {
 			return " disabled";
 		}
 	}

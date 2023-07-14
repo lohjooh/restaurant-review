@@ -1,4 +1,4 @@
-import http from "../http-common.js";
+import http from "./http-common.js";
 
 export default class RestaurantDataService {
 	static async getAll(page = 1) {

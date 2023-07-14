@@ -1,67 +1,43 @@
 import { useState, useEffect } from "react";
+
 import RestaurantDS from "./services/restaurant.js";
 import Pagebar from "./pagebar.jsx";
-import { Link } from "react-router-dom";
+import Search from "./search.jsx";
+import CuisinesSearch from "./cuisines.jsx";
+import RestaurantCard from "./restaurant-card.jsx";
 
 function RestaurantsList() {
 	const [restaurants, setRestaurants] = useState([]);
-	const [searchName, setSearchName] = useState([]);
-	const [searchZip, setSearchZip] = useState([]);
-	const [searchCuisine, setSearchCuisine] = useState([]);
-	const [cuisines, setCuisines] = useState(["All Cuisines"]);
-
-	const [page, setPage] = useState(1);
-	const [total, setTotal] = useState(1);
-	const [limit, setLimit] = useState(1);
-
+	const [pageInfo, setPageInfo] = useState({
+		page: 1,
+		totalRestaurantsFound: 1,
+		resultsPerPage: 1,
+	});
 	const [lastQuery, setLastQuery] = useState({
 		query: "",
 		by: "",
 	});
 
+	const { page, totalRestaurantsFound, resultsPerPage } = pageInfo;
+
 	useEffect(() => {
 		retrieveRestaurants();
-		retrieveCuisines();
-
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
-
-	function onChangeSearchName(name) {
-		const searchName = name.target.value;
-		setSearchName(searchName);
-	}
-
-	function onChangeSearchZip(name) {
-		const searchName = name.target.value;
-		setSearchZip(searchName);
-	}
-
-	function onChangeSearchCuisine(name) {
-		const searchName = name.target.value;
-		setSearchCuisine(searchName);
-	}
 
 	function refreshList() {
 		retrieveRestaurants();
 	}
 
+	function parseData(res) {
+		const { restaurants, ...dataPageInfo } = res.data;
+		setRestaurants(restaurants);
+		setPageInfo(dataPageInfo);
+	}
+
 	async function retrieveRestaurants() {
 		try {
 			const res = await RestaurantDS.getAll();
-			const data = res.data;
-			setRestaurants(data.restaurants);
-			setPage(parseInt(data.page));
-			setTotal(data.totalRestaurantsFound);
-			setLimit(data.resultsPerPage);
-		} catch (err) {
-			console.error(err);
-		}
-	}
-
-	async function retrieveCuisines() {
-		try {
-			const res = await RestaurantDS.getCuisines();
-			setCuisines(cuisines.concat(cuisines, res.data));
+			parseData(res);
 		} catch (err) {
 			console.error(err);
 		}
@@ -70,141 +46,59 @@ function RestaurantsList() {
 	async function find(query, by, pageNum = 1) {
 		try {
 			const res = await RestaurantDS.find(query, by, pageNum);
-			const data = res.data;
-			setRestaurants(data.restaurants);
-			setPage(parseInt(data.page));
-			setTotal(data.totalRestaurantsFound);
-			setLimit(data.resultsPerPage);
+			parseData(res);
 			setLastQuery({ query, by });
 		} catch (err) {
 			console.error(err);
 		}
 	}
 
-	function findByName() {
-		find(searchName, "name");
-	}
-
-	function findByZip() {
-		find(searchZip, "zipcode");
-	}
-
-	function findByCuisine() {
-		if (searchCuisine === "All Cuisines") {
-			refreshList();
-		} else {
-			find(searchCuisine, "cuisine");
-		}
-	}
-
 	function next() {
 		const { query, by } = lastQuery;
-		find(query, by, page + 1);
+		find(query, by, parseInt(page) + 1);
 	}
 
 	function prev() {
 		const { query, by } = lastQuery;
-		find(query, by, page - 1);
+		find(query, by, parseInt(page) - 1);
 	}
 
 	return (
 		<div>
 			<div className="row pb-1">
-				<div className="input-group col-lg-4">
-					<input
-						type="text"
-						className="form-control"
-						placeholder="Search by name"
-						value={searchName}
-						onChange={onChangeSearchName}
-					/>
-					<div className="input-group-append">
-						<button
-							className="btn btn-outline-secondary"
-							type="button"
-							onClick={findByName}>
-							Search
-						</button>
-					</div>
-				</div>
-				<div className="input-group col-lg-4">
-					<input
-						type="text"
-						className="form-control"
-						placeholder="Search by zip"
-						value={searchZip}
-						onChange={onChangeSearchZip}
-					/>
-					<div className="input-group-append">
-						<button
-							className="btn btn-outline-secondary"
-							type="button"
-							onClick={findByZip}>
-							Search
-						</button>
-					</div>
-				</div>
-				<div className="input-group col-lg-4">
-					<select onChange={onChangeSearchCuisine}>
-						{cuisines.map((cuisine, index) => {
-							return (
-								<option key={index} value={cuisine}>
-									{" "}
-									{cuisine.substr(0, 20)}{" "}
-								</option>
-							);
-						})}
-					</select>
-					<div className="input-group-append">
-						<button
-							className="btn btn-outline-secondary"
-							type="button"
-							onClick={findByCuisine}>
-							Search
-						</button>
-					</div>
-				</div>
+				<Search by="name" find={find} />
+				<Search by="zipcode" find={find} />
+				<CuisinesSearch refreshList={refreshList} find={find} />
 			</div>
-			<div className="row">
+			<div className="row align-middle justify-content-center">
 				{restaurants.map((restaurant, index) => {
-					const address = `${restaurant.address.building} ${restaurant.address.street}, ${restaurant.address.zipcode}`;
+					const address =
+						restaurant.address.building +
+						" " +
+						restaurant.address.street +
+						" " +
+						restaurant.address.zipcode;
 					return (
-						<div className="col-lg-4 pb-1" key={index}>
-							<div className="card">
-								<div className="card-body">
-									<h5 className="card-title">{restaurant.name}</h5>
-									<p className="card-text">
-										<strong>Cuisine: </strong>
-										{restaurant.cuisine}
-										<br />
-										<strong>Address: </strong>
-										{address}
-									</p>
-									<div className="row">
-										<Link
-											to={"/restaurants/" + restaurant._id}
-											className="btn btn-primary col-lg-5 mx-1 mb-1">
-											View Reviews
-										</Link>
-										<a
-											target="_blank"
-											rel="noreferrer"
-											href={"https://www.google.com/maps/place/" + address}
-											className="btn btn-primary col-lg-5 mx-1 mb-1">
-											View Map
-										</a>
-									</div>
-								</div>
-							</div>
-						</div>
+						<RestaurantCard
+							key={index}
+							name={restaurant.name}
+							cuisine={restaurant.cuisine}
+							_id={restaurant._id}
+							address={address}
+						/>
 					);
 				})}
+				{!restaurants.length && (
+					<p className="text-center fs-1 mt-5 mb-5 pt-5 pb-5">
+						No matching restaurants found
+					</p>
+				)}
 			</div>
 			<br />
 			<Pagebar
 				page={page}
-				total={total}
-				limit={limit}
+				total={totalRestaurantsFound}
+				limit={resultsPerPage}
 				next={next}
 				prev={prev}
 			/>

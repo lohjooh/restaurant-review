@@ -29,8 +29,7 @@ function Restaurants(props) {
 
 	async function deleteReview(reviewId, index) {
 		try {
-			const res = await RestaurantDS.deleteReview(reviewId, props.user.id);
-
+			await RestaurantDS.deleteReview(reviewId, props.user.id);
 			setRestaurant((prev) => {
 				prev.reviews.splice(index, 1);
 				return { ...prev };
