@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import RestaurantDS from "./services/restaurant.js";
+import Pagebar from "./pagebar.jsx";
 import { Link } from "react-router-dom";
 
 function RestaurantsList() {
@@ -8,6 +9,15 @@ function RestaurantsList() {
 	const [searchZip, setSearchZip] = useState([]);
 	const [searchCuisine, setSearchCuisine] = useState([]);
 	const [cuisines, setCuisines] = useState(["All Cuisines"]);
+
+	const [page, setPage] = useState(1);
+	const [total, setTotal] = useState(1);
+	const [limit, setLimit] = useState(1);
+
+	const [lastQuery, setLastQuery] = useState({
+		query: "",
+		by: "",
+	});
 
 	useEffect(() => {
 		retrieveRestaurants();
@@ -38,7 +48,11 @@ function RestaurantsList() {
 	async function retrieveRestaurants() {
 		try {
 			const res = await RestaurantDS.getAll();
-			setRestaurants(res.data.restaurants);
+			const data = res.data;
+			setRestaurants(data.restaurants);
+			setPage(parseInt(data.page));
+			setTotal(data.totalRestaurantsFound);
+			setLimit(data.resultsPerPage);
 		} catch (err) {
 			console.error(err);
 		}
@@ -53,10 +67,15 @@ function RestaurantsList() {
 		}
 	}
 
-	async function find(query, by) {
+	async function find(query, by, pageNum = 1) {
 		try {
-			const res = await RestaurantDS.find(query, by);
-			setRestaurants(res.data.restaurants);
+			const res = await RestaurantDS.find(query, by, pageNum);
+			const data = res.data;
+			setRestaurants(data.restaurants);
+			setPage(parseInt(data.page));
+			setTotal(data.totalRestaurantsFound);
+			setLimit(data.resultsPerPage);
+			setLastQuery({ query, by });
 		} catch (err) {
 			console.error(err);
 		}
@@ -76,6 +95,16 @@ function RestaurantsList() {
 		} else {
 			find(searchCuisine, "cuisine");
 		}
+	}
+
+	function next() {
+		const { query, by } = lastQuery;
+		find(query, by, page + 1);
+	}
+
+	function prev() {
+		const { query, by } = lastQuery;
+		find(query, by, page - 1);
 	}
 
 	return (
@@ -117,8 +146,13 @@ function RestaurantsList() {
 				</div>
 				<div className="input-group col-lg-4">
 					<select onChange={onChangeSearchCuisine}>
-						{cuisines.map((cuisine) => {
-							return <option value={cuisine}> {cuisine.substr(0, 20)} </option>;
+						{cuisines.map((cuisine, index) => {
+							return (
+								<option key={index} value={cuisine}>
+									{" "}
+									{cuisine.substr(0, 20)}{" "}
+								</option>
+							);
 						})}
 					</select>
 					<div className="input-group-append">
@@ -132,10 +166,10 @@ function RestaurantsList() {
 				</div>
 			</div>
 			<div className="row">
-				{restaurants.map((restaurant) => {
+				{restaurants.map((restaurant, index) => {
 					const address = `${restaurant.address.building} ${restaurant.address.street}, ${restaurant.address.zipcode}`;
 					return (
-						<div className="col-lg-4 pb-1">
+						<div className="col-lg-4 pb-1" key={index}>
 							<div className="card">
 								<div className="card-body">
 									<h5 className="card-title">{restaurant.name}</h5>
@@ -166,6 +200,14 @@ function RestaurantsList() {
 					);
 				})}
 			</div>
+			<br />
+			<Pagebar
+				page={page}
+				total={total}
+				limit={limit}
+				next={next}
+				prev={prev}
+			/>
 		</div>
 	);
 }
